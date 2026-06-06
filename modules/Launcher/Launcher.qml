@@ -1,11 +1,12 @@
 import "../../config"
 import "../../components"
 import Quickshell
+import Quickshell.Widgets
 import Quickshell.Wayland
 import QtQuick
 
 // Launcher: faixa de hover no rodapé-centro faz um painel SUBIR (slide-up +
-// fade). Campo de busca + lista de apps — tudo FAKE, nada executa.
+// fade). Campo de busca fake + lista read-only de apps via DesktopEntries.
 PanelWindow {
     id: root
     required property var modelData
@@ -13,7 +14,7 @@ PanelWindow {
 
     anchors { bottom: true; left: true; right: true }
     exclusiveZone: 0
-    implicitHeight: 540
+    implicitHeight: 420
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
     // Foco de teclado SÓ quando aberto → permite Esc fechar, sem roubar teclas
@@ -30,6 +31,11 @@ PanelWindow {
     property bool open: false
     function toggle() { root.open = !root.open }
     function close() { root.open = false }
+
+    DesktopAppModel {
+        id: appModel
+        limit: 4
+    }
 
     // Máscara DESACOPLADA da animação do card (essa dependência causava o loop
     // abre/fecha sobre janelas atrás). Fechado = só o hotspot do puxador no
@@ -93,11 +99,12 @@ PanelWindow {
 
     Card {
         id: card
-        width: 680
+        width: 632
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: root.open ? Theme.gap : -(height + 30)
         opacity: root.open ? 1 : 0
+        radius: Theme.radiusLg
         // painel sólido + contorno mais nítido: sem blur real, isso separa o
         // launcher das janelas atrás (terminal/browser) e mata o efeito fantasma.
         color: Theme.surfaceStrong
@@ -116,40 +123,70 @@ PanelWindow {
             anchors { left: parent.left; right: parent.right; top: parent.top; margins: Theme.pad }
             spacing: Theme.gap
 
-            // resultados (fake)
-            Repeater {
-                model: [
-                    { glyph: "", title: "Wallpaper", sub: "Change the current wallpaper" },
-                    { glyph: "", title: "Files", sub: "Browse your files" },
-                    { glyph: "", title: "Terminal", sub: "Open a terminal session" },
-                    { glyph: "", title: "Settings", sub: "System configuration" }
-                ]
-                delegate: Rectangle {
-                    required property var modelData
-                    width: parent.width
-                    height: 58
-                    radius: Theme.radiusSm
-                    antialiasing: true
-                    color: rowHover.hovered ? Theme.accentSoft : "transparent"
-                    Behavior on color { ColorAnimation { duration: Theme.tFast } }
+            // resultados read-only
+            Rectangle {
+                width: parent.width
+                radius: Theme.radiusLg
+                antialiasing: true
+                color: Theme.accentTrack
+                border.width: 1
+                border.color: Theme.stroke
+                implicitHeight: resultsCol.implicitHeight + Theme.gap * 2
 
-                    HoverHandler { id: rowHover }
+                Column {
+                    id: resultsCol
+                    anchors { left: parent.left; right: parent.right; top: parent.top; margins: Theme.gap }
+                    spacing: 6
 
-                    Row {
-                        anchors { left: parent.left; leftMargin: Theme.pad; verticalCenter: parent.verticalCenter }
-                        spacing: Theme.pad
-                        Rectangle {
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: 38; height: 38; radius: Theme.radiusSm
+                    Repeater {
+                        model: appModel.apps
+                        delegate: Rectangle {
+                            required property var modelData
+                            width: parent.width
+                            height: 54
+                            radius: Theme.radius
                             antialiasing: true
-                            color: Theme.card
-                            Text { anchors.centerIn: parent; text: modelData.glyph; font.family: Theme.iconFont; font.pixelSize: 18; color: Theme.accent }
-                        }
-                        Column {
-                            anchors.verticalCenter: parent.verticalCenter
-                            spacing: 1
-                            Text { text: modelData.title; font.pixelSize: 15; color: Theme.text }
-                            Text { text: modelData.sub; font.pixelSize: 12; color: Theme.textDim }
+                            color: rowHover.hovered ? Theme.accentSoft : Theme.card
+                            border.width: 1
+                            border.color: rowHover.hovered ? Theme.strokeStrong : Theme.stroke
+                            Behavior on color { ColorAnimation { duration: Theme.tFast } }
+                            Behavior on border.color { ColorAnimation { duration: Theme.tFast } }
+
+                            HoverHandler { id: rowHover }
+
+                            Row {
+                                anchors { left: parent.left; leftMargin: Theme.pad; verticalCenter: parent.verticalCenter }
+                                spacing: Theme.pad - 2
+                                Rectangle {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 38; height: 38; radius: Theme.radiusSm
+                                    antialiasing: true
+                                    color: Theme.surfaceStrong
+
+                                    IconImage {
+                                        id: appIcon
+                                        anchors.centerIn: parent
+                                        implicitSize: 24
+                                        source: modelData.iconSource || ""
+                                        visible: source.length > 0 && status === Image.Ready
+                                    }
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        visible: !appIcon.visible
+                                        text: modelData.initial
+                                        font.pixelSize: 16
+                                        font.bold: true
+                                        color: Theme.accent
+                                    }
+                                }
+                                Column {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 1
+                                    Text { text: modelData.name; font.pixelSize: 15; color: Theme.text }
+                                    Text { text: modelData.subtitle; font.pixelSize: 12; color: Theme.textDim; width: 500; elide: Text.ElideRight }
+                                }
+                            }
                         }
                     }
                 }
@@ -158,10 +195,12 @@ PanelWindow {
             // campo de busca (fake)
             Rectangle {
                 width: parent.width
-                height: 50
+                height: 46
                 radius: height / 2
                 antialiasing: true
-                color: Theme.accentTrack
+                color: Theme.card
+                border.width: 1
+                border.color: Theme.stroke
                 Row {
                     anchors { left: parent.left; leftMargin: Theme.pad + 4; verticalCenter: parent.verticalCenter }
                     spacing: Theme.gap
