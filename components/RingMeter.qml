@@ -19,9 +19,9 @@ Item {
             const ctx = getContext("2d");
             ctx.reset();
             const cx = width / 2, cy = height / 2;
-            const r = Math.min(width, height) / 2 - 9;
+            const r = Math.min(width, height) / 2 - Theme.ringWidth;
             const start = -Math.PI / 2;
-            ctx.lineWidth = 9;
+            ctx.lineWidth = Theme.ringWidth;
             ctx.lineCap = "round";
             // trilha
             ctx.beginPath();
@@ -53,7 +53,7 @@ Item {
         Text {
             anchors.horizontalCenter: parent.horizontalCenter
             text: root.sub
-            font.pixelSize: 12
+            font.pixelSize: Theme.fsBody
             color: Theme.textDim
         }
     }

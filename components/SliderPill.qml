@@ -41,7 +41,7 @@ Item {
     Text {
         anchors { right: parent.right; rightMargin: Theme.pad; verticalCenter: parent.verticalCenter }
         text: Math.round(root.value * 100) + "%"
-        font.pixelSize: 13
+        font.pixelSize: Theme.fsBodyLg
         color: Theme.text
     }
 

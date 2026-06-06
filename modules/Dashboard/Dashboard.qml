@@ -39,7 +39,7 @@ Item {
                     }
                     Column {
                         anchors.verticalCenter: parent.verticalCenter
-                        Text { text: "15°C"; font.pixelSize: 34; color: Theme.text }
+                        Text { text: "15°C"; font.pixelSize: Theme.fsDisplay; color: Theme.text }
                         Text { text: "Clear"; font.pixelSize: 15; color: Theme.textDim }
                     }
                 }
@@ -53,7 +53,7 @@ Item {
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: "21:06"
-                        font.pixelSize: 52
+                        font.pixelSize: Theme.fsHero
                         font.bold: true
                         color: Theme.text
                     }
@@ -125,20 +125,20 @@ Item {
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: "Bad Apple!! feat. no…"
-                        font.pixelSize: 14
+                        font.pixelSize: Theme.fsLabel
                         color: Theme.text
                     }
                     Text {
                         anchors.horizontalCenter: parent.horizontalCenter
                         text: "Alstroemeria Records"
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fsBody
                         color: Theme.textDim
                     }
                     Row {
                         anchors.horizontalCenter: parent.horizontalCenter
                         spacing: Theme.pad
                         Text { text: ""; font.family: Theme.iconFont; font.pixelSize: 16; color: Theme.textDim }  // prev
-                        Text { text: ""; font.family: Theme.iconFont; font.pixelSize: 18; color: Theme.accent }   // play
+                        Text { text: ""; font.family: Theme.iconFont; font.pixelSize: Theme.glyphMd; color: Theme.accent }   // play
                         Text { text: ""; font.family: Theme.iconFont; font.pixelSize: 16; color: Theme.textDim }  // next
                     }
                 }
@@ -176,7 +176,7 @@ Item {
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: modelData.l
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fsCaption
                                 color: Theme.textDim
                             }
                         }
