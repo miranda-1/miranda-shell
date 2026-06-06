@@ -16,57 +16,76 @@ PanelWindow {
     implicitHeight: 540
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
+    // Foco de teclado SÓ quando aberto → permite Esc fechar, sem roubar teclas
+    // das janelas atrás (terminal/browser) em repouso. OnDemand = o compositor
+    // concede o foco no clique que abre; None = não interfere.
+    WlrLayershell.keyboardFocus: root.open ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     readonly property int sliverW: 220
-    readonly property int bridgeH: 28   // ponte estreita puxador↔card (zona de transição)
-    // Hover unificado: um único HoverHandler + a MÁSCARA define a área interativa.
-    // Repouso = faixa no rodapé-centro; aberto = a CAIXA do card + uma ponte estreita
-    // central fixa no rodapé (não a largura inteira até a base). A ponte mantém o
-    // hover ao subir o mouse do puxador para o card, sem abrir uma região larga.
-    // Abrir e fechar têm atraso (anti-acidental / anti-fechamento-prematuro).
-    property bool hovering: hover.hovered
+    readonly property int gripHotspotH: 18   // altura da zona clicável do puxador (repouso)
+
+    // Abertura por CLIQUE no puxador (não por hover). `open` é alternado pelo
+    // TapHandler da zona do grip; hover é só feedback visual. Esc e clique-fora
+    // fecham. Sem timers de hover: a abertura é sempre intencional.
     property bool open: false
-    Timer { id: openTimer; interval: Theme.tHoverOpen; onTriggered: root.open = true }
-    Timer { id: closeTimer; interval: Theme.tHoverClose; onTriggered: root.open = false }
-    onHoveringChanged: {
-        if (root.hovering) { closeTimer.stop(); openTimer.start() }
-        else { openTimer.stop(); closeTimer.start() }
-    }
+    function toggle() { root.open = !root.open }
+    function close() { root.open = false }
 
+    // Máscara DESACOPLADA da animação do card (essa dependência causava o loop
+    // abre/fecha sobre janelas atrás). Fechado = só o hotspot do puxador no
+    // rodapé-centro → resto da tela é click-through. Aberto = a JANELA inteira:
+    // região sólida e estável (não segue o card que desliza); clicar fora do
+    // card fecha.
     mask: Region {
-        // caixa do card (aberto) / faixa de gatilho no rodapé (repouso)
-        x: root.open ? Math.round(card.x) : Math.round((root.width - root.sliverW) / 2)
-        y: root.open ? Math.round(card.y) : (root.height - 14)
-        width: root.open ? Math.ceil(card.width) : root.sliverW
-        height: root.open ? Math.ceil(card.height) : 14
-
-        // ponte: só quando aberto. Faixa estreita central colada no rodapé, que
-        // sobrepõe a base do card → corredor contínuo puxador→card sem área gigante.
-        Region {
-            x: Math.round((root.width - root.sliverW) / 2)
-            y: root.open ? (root.height - root.bridgeH) : 0
-            width: root.sliverW
-            height: root.open ? root.bridgeH : 0
-        }
+        x: root.open ? 0 : Math.round((root.width - root.sliverW) / 2)
+        y: root.open ? 0 : (root.height - root.gripHotspotH)
+        width: root.open ? root.width : root.sliverW
+        height: root.open ? root.height : root.gripHotspotH
     }
 
-    // HoverHandler único — recebe eventos só dentro da máscara
-    Item { anchors.fill: parent; HoverHandler { id: hover } }
+    // Fundo de captura: ativo só quando aberto. Clique em qualquer ponto FORA do
+    // card fecha o launcher. Declarado primeiro → fica ATRÁS do card e do grip.
+    MouseArea {
+        anchors.fill: parent
+        enabled: root.open
+        onClicked: root.close()
+    }
 
-    // puxador autônomo: discreto, sem depender de moldura contínua
-    Rectangle {
-        id: grip
-        anchors { bottom: parent.bottom; bottomMargin: 7; horizontalCenter: parent.horizontalCenter }
-        width: Theme.gripLen
-        height: Theme.gripThickness
-        radius: height / 2
-        antialiasing: true
-        color: root.open ? Theme.gripHover : Theme.gripColor
+    // Esc fecha. Precisa de um item com foco ativo; o foco de teclado é concedido
+    // pelo compositor (keyboardFocus OnDemand) no clique que abre o painel.
+    Item {
+        anchors.fill: parent
+        focus: root.open
+        Keys.onEscapePressed: root.close()
+    }
+
+    // Zona do puxador: área clicável que coincide com a máscara fechada (mais
+    // fácil de acertar que a linha de 3px). Clique alterna abrir/fechar; hover é
+    // só feedback visual. Some quando aberto.
+    Item {
+        id: gripZone
+        anchors { bottom: parent.bottom; horizontalCenter: parent.horizontalCenter }
+        width: root.sliverW
+        height: root.gripHotspotH
         opacity: root.open ? 0 : 1
-        scale: hover.hovered ? 1.04 : 1.0
-        Behavior on color { ColorAnimation { duration: Theme.tFast } }
         Behavior on opacity { NumberAnimation { duration: Theme.tFast } }
-        Behavior on scale { NumberAnimation { duration: Theme.tFast; easing.type: Easing.OutCubic } }
+
+        HoverHandler { id: gripHover }
+        TapHandler { onTapped: root.toggle() }
+
+        // linha fina visível do puxador, centrada na zona
+        Rectangle {
+            id: grip
+            anchors { bottom: parent.bottom; bottomMargin: 7; horizontalCenter: parent.horizontalCenter }
+            width: Theme.gripLen
+            height: Theme.gripThickness
+            radius: height / 2
+            antialiasing: true
+            color: gripHover.hovered ? Theme.gripHover : Theme.gripColor
+            scale: gripHover.hovered ? 1.04 : 1.0
+            Behavior on color { ColorAnimation { duration: Theme.tFast } }
+            Behavior on scale { NumberAnimation { duration: Theme.tFast; easing.type: Easing.OutCubic } }
+        }
     }
 
     Card {
@@ -84,6 +103,10 @@ PanelWindow {
 
         Behavior on anchors.bottomMargin { NumberAnimation { duration: Theme.tBase; easing.type: Easing.OutExpo } }
         Behavior on opacity { NumberAnimation { duration: Theme.tFast } }
+
+        // engole cliques dentro do card → não chegam ao fundo de captura, então
+        // clicar no painel NÃO fecha. Fica atrás da Column (hover das linhas intacto).
+        MouseArea { anchors.fill: parent }
 
         Column {
             id: col
