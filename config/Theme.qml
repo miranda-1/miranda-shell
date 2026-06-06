@@ -15,6 +15,10 @@ Singleton {
     readonly property color card:         Qt.rgba(0.976, 0.945, 0.929, 0.92) // card
     readonly property color cardHover:    Qt.rgba(0.988, 0.961, 0.949, 0.96) // card em hover
     readonly property color bar:          Qt.rgba(0.965, 0.925, 0.905, 0.85) // barra esquerda
+    // painel "sólido focado": quase opaco, para overlays que se sobrepõem a
+    // JANELAS (não só ao wallpaper) — sem blur real, a translucidez alta virava
+    // fantasma sobre terminal/browser. Usado no Launcher.
+    readonly property color surfaceStrong: Qt.rgba(0.972, 0.940, 0.922, 0.985)
 
     // ---- acento clay / rosé ----
     readonly property color accent:       "#b0604a"   // terracota principal
@@ -30,6 +34,7 @@ Singleton {
 
     // ---- separação (quase sem stroke; a sombra é a borda) ----
     readonly property color stroke:       Qt.rgba(0, 0, 0, 0.06)
+    readonly property color strokeStrong: Qt.rgba(0, 0, 0, 0.12)  // contorno mais nítido p/ separar de janelas
     readonly property color shadow:       Qt.rgba(0, 0, 0, 0.16)
     readonly property real  shadowBlur:   0.8   // 0..1 (MultiEffect)
     readonly property int   shadowY:      6

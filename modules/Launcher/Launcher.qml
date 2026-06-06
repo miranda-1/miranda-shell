@@ -18,10 +18,12 @@ PanelWindow {
     WlrLayershell.layer: WlrLayer.Top
 
     readonly property int sliverW: 220
+    readonly property int bridgeH: 28   // ponte estreita puxador↔card (zona de transição)
     // Hover unificado: um único HoverHandler + a MÁSCARA define a área interativa.
-    // Repouso = faixa no rodapé-centro; aberto = do TOPO do card até a BASE da tela
-    // (inclui o corredor puxador↔card → o mouse sobe sem o painel fechar). Abrir e
-    // fechar têm atraso para evitar abertura acidental e fechamento prematuro.
+    // Repouso = faixa no rodapé-centro; aberto = a CAIXA do card + uma ponte estreita
+    // central fixa no rodapé (não a largura inteira até a base). A ponte mantém o
+    // hover ao subir o mouse do puxador para o card, sem abrir uma região larga.
+    // Abrir e fechar têm atraso (anti-acidental / anti-fechamento-prematuro).
     property bool hovering: hover.hovered
     property bool open: false
     Timer { id: openTimer; interval: Theme.tHoverOpen; onTriggered: root.open = true }
@@ -32,10 +34,20 @@ PanelWindow {
     }
 
     mask: Region {
+        // caixa do card (aberto) / faixa de gatilho no rodapé (repouso)
         x: root.open ? Math.round(card.x) : Math.round((root.width - root.sliverW) / 2)
         y: root.open ? Math.round(card.y) : (root.height - 14)
         width: root.open ? Math.ceil(card.width) : root.sliverW
-        height: root.open ? Math.ceil(root.height - card.y) : 14
+        height: root.open ? Math.ceil(card.height) : 14
+
+        // ponte: só quando aberto. Faixa estreita central colada no rodapé, que
+        // sobrepõe a base do card → corredor contínuo puxador→card sem área gigante.
+        Region {
+            x: Math.round((root.width - root.sliverW) / 2)
+            y: root.open ? (root.height - root.bridgeH) : 0
+            width: root.sliverW
+            height: root.open ? root.bridgeH : 0
+        }
     }
 
     // HoverHandler único — recebe eventos só dentro da máscara
@@ -64,6 +76,10 @@ PanelWindow {
         anchors.bottom: parent.bottom
         anchors.bottomMargin: root.open ? Theme.gap : -(height + 30)
         opacity: root.open ? 1 : 0
+        // painel sólido + contorno mais nítido: sem blur real, isso separa o
+        // launcher das janelas atrás (terminal/browser) e mata o efeito fantasma.
+        color: Theme.surfaceStrong
+        border.color: Theme.strokeStrong
         height: col.implicitHeight + Theme.pad * 2
 
         Behavior on anchors.bottomMargin { NumberAnimation { duration: Theme.tBase; easing.type: Easing.OutExpo } }
