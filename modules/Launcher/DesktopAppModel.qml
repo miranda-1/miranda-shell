@@ -97,6 +97,7 @@ QtObject {
         const initial = resolvedName.trim().length ? resolvedName.trim().charAt(0).toUpperCase() : "?";
 
         return {
+            desktopEntry: entry,
             name: resolvedName,
             desktopName: name,
             genericName: genericName,

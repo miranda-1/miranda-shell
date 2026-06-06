@@ -34,6 +34,20 @@ PanelWindow {
     property bool open: false
     function toggle() { root.open = !root.open }
     function close() { root.open = false }
+    function launchApp(app) {
+        if (!app || !app.desktopEntry)
+            return;
+
+        app.desktopEntry.execute();
+        searchInput.text = "";
+        root.close();
+    }
+    function launchFirstResult() {
+        if (appModel.apps.length === 0)
+            return;
+
+        root.launchApp(appModel.apps[0]);
+    }
 
     DesktopAppModel {
         id: appModel
@@ -160,6 +174,7 @@ PanelWindow {
                             Behavior on border.color { ColorAnimation { duration: Theme.tFast } }
 
                             HoverHandler { id: rowHover }
+                            TapHandler { onTapped: root.launchApp(modelData) }
 
                             Row {
                                 anchors { left: parent.left; leftMargin: Theme.pad; verticalCenter: parent.verticalCenter }
@@ -237,8 +252,14 @@ PanelWindow {
                             verticalAlignment: TextInput.AlignVCenter
 
                             Keys.forwardTo: [closeProxy]
-                            Keys.onReturnPressed: (event) => { event.accepted = true }
-                            Keys.onEnterPressed: (event) => { event.accepted = true }
+                            Keys.onReturnPressed: (event) => {
+                                event.accepted = true;
+                                root.launchFirstResult();
+                            }
+                            Keys.onEnterPressed: (event) => {
+                                event.accepted = true;
+                                root.launchFirstResult();
+                            }
                         }
 
                         Text {
