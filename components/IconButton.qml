@@ -16,6 +16,12 @@ Item {
     implicitHeight: 40
     readonly property bool hovered: hover.hovered
 
+    // estado "apagado" do highlight: MESMA cor do hover, porém com alfa 0.
+    // Evita o flicker do hover — animar de/para "transparent" (#00000000)
+    // interpola o RGB partindo do PRETO e pisca um tom escuro a cada enter/leave.
+    // Com este token a ColorAnimation mexe só no alfa, sem flash.
+    readonly property color hlClear: Qt.rgba(Theme.accentSoft.r, Theme.accentSoft.g, Theme.accentSoft.b, 0)
+
     // fundo highlight / ativo
     Rectangle {
         id: hl
@@ -27,7 +33,7 @@ Item {
         color: tap.pressed && !root.active ? Theme.accentPressed
              : root.active ? Theme.accentActive
              : root.hovered ? Theme.accentSoft
-             : "transparent"
+             : root.hlClear
         scale: tap.pressed ? 0.94
              : (root.hovered && !root.active) ? 1.08
              : 1.0
