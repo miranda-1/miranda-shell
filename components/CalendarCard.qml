@@ -1,24 +1,15 @@
 import "../config"
 import QtQuick
 
-// Mini-calendário fake. Dia `highlight` marcado em círculo clay.
+// Mini-calendário do mês corrente. Recebe `cells` (grade real do Clock) e marca
+// o dia `highlight` em círculo clay. Semana começando na segunda-feira.
 Rectangle {
     id: root
 
-    property int highlight: 7
-
-    readonly property var days: {
-        const arr = [];
-        const lead = [26, 27, 28, 29, 30, 31];
-        for (let i = 0; i < lead.length; i++)
-            arr.push({ n: lead[i], muted: true });
-        for (let d = 1; d <= 30; d++)
-            arr.push({ n: d, muted: false });
-        let pad = 1;
-        while (arr.length % 7 !== 0)
-            arr.push({ n: pad++, muted: true });
-        return arr;
-    }
+    property int highlight: -1
+    // Lista de células do mês: cada item { day: int (0 = vazio), empty: bool }.
+    // Vem do Clock; semana começa na segunda (alinhado ao cabeçalho Mon..Sun).
+    property var cells: []
 
     color: Theme.card
     radius: Theme.radius
@@ -56,12 +47,12 @@ Rectangle {
         rowSpacing: 2
         columnSpacing: 0
         Repeater {
-            model: root.days
+            model: root.cells
             delegate: Item {
                 required property var modelData
                 width: 34
                 height: 28
-                readonly property bool isHi: !modelData.muted && modelData.n === root.highlight
+                readonly property bool isHi: !modelData.empty && modelData.day === root.highlight
 
                 Rectangle {
                     anchors.centerIn: parent
@@ -74,10 +65,9 @@ Rectangle {
                 }
                 Text {
                     anchors.centerIn: parent
-                    text: modelData.n
+                    text: modelData.empty ? "" : modelData.day
                     font.pixelSize: 13
-                    color: parent.isHi ? Theme.textOnAccent
-                         : modelData.muted ? Theme.textFaint : Theme.text
+                    color: parent.isHi ? Theme.textOnAccent : Theme.text
                 }
             }
         }

@@ -97,7 +97,8 @@ Item {
 
             CalendarCard {
                 width: 300
-                highlight: Clock.day
+                cells: Clock.calendarCells
+                highlight: Clock.currentDay
             }
         }
 
