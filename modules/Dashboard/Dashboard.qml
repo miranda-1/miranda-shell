@@ -92,6 +92,13 @@ Item {
                         Text { text: ""; font.family: Theme.iconFont; font.pixelSize: 16; color: Theme.accent }  // relógio
                         Text { text: "up 1 hour, 23 minutes"; font.pixelSize: 15; color: Theme.text }
                     }
+                    // bateria real (read-only via UPower); some em máquinas sem bateria
+                    Row {
+                        spacing: Theme.gap
+                        visible: Battery.available
+                        Text { text: ""; font.family: Theme.iconFont; font.pixelSize: 16; color: Theme.accent }  // bateria
+                        Text { text: Battery.statusText; font.pixelSize: 15; color: Theme.text }
+                    }
                 }
             }
 
