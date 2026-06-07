@@ -25,12 +25,15 @@ PanelWindow {
     mask: Region { x: 0; y: 0; width: Theme.barW; height: root.height }
 
     // casca visível da barra: uma "pill" vertical maior, cortada pela borda
-    // esquerda do monitor. O clip deixa o lado esquerdo reto e o direito suave.
+    // esquerda do monitor. A parte arredondada esquerda do barBg fica em x<0
+    // (fora da janela), então o lado esquerdo já lê como reto SEM precisar de
+    // clip. Mantemos clip:false para os tooltips (filhos em x≥barW) renderizarem
+    // na área de reserva à direita em vez de serem recortados pela casca.
     Item {
         id: shellShape
         anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
         width: Theme.barW
-        clip: true
+        clip: false
 
         Rectangle {
             id: barBg

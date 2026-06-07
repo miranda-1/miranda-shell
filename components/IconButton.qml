@@ -56,7 +56,11 @@ Item {
     // os botões da barra são display-only nesta fase, comportamento inalterado.
     TapHandler { id: tap }
 
-    // tooltip lateral (à direita do ícone)
+    // tooltip lateral (à direita do ícone). Renderizado fora da casca clipada
+    // (ver EdgeLeft: shellShape sem clip) — fica na área de reserva da janela.
+    // Display-only: sem HoverHandler/TapHandler e fora da máscara → click-through,
+    // não altera hover/click dos ícones. Chip grafite, texto claro, borda sutil.
+    // Anima só opacity/x (sem color→"transparent"), então não reintroduz flicker.
     Item {
         id: tip
         visible: opacity > 0 && root.label.length > 0
@@ -69,15 +73,20 @@ Item {
         Behavior on opacity { NumberAnimation { duration: Theme.tFast } }
         Behavior on x { NumberAnimation { duration: Theme.tBase; easing.type: Easing.OutCubic} }
 
-        Card {
+        Rectangle {
             id: tipBg
             width: tipText.implicitWidth + Theme.pad * 2
             height: tipText.implicitHeight + Theme.gap * 2
+            radius: Theme.radiusSm
+            antialiasing: true
+            color: Theme.accentActive                    // grafite escuro
+            border.width: 1
+            border.color: Qt.rgba(1, 1, 1, 0.14)         // borda clara sutil sobre o grafite
             Text {
                 id: tipText
                 anchors.centerIn: parent
                 text: root.label
-                color: Theme.text
+                color: Theme.textOnAccent                 // texto claro
                 font.pixelSize: 13
             }
         }
