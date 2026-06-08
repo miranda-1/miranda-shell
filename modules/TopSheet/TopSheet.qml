@@ -16,9 +16,9 @@ PanelWindow {
     signal requestClose()
 
     screen: modelData
-    anchors { top: true; left: true; right: true }
+    anchors { top: true; left: true; right: true; bottom: true }
     exclusiveZone: 0
-    implicitHeight: Math.min(Math.max(root.screenHeight * 0.7, 520), 860)
+    implicitHeight: root.screenHeight
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
     WlrLayershell.keyboardFocus: root.open && root.currentPage === "search"
@@ -27,14 +27,12 @@ PanelWindow {
 
     readonly property real screenWidth: root.screen && root.screen.width ? root.screen.width : 1440
     readonly property real screenHeight: root.screen && root.screen.height ? root.screen.height : 900
-    readonly property real railOffset: Theme.barW + 18
-    readonly property real availableWidth: Math.max(720, root.screenWidth - root.railOffset - 48)
-    readonly property real compactWidth: Math.min(Math.max(root.availableWidth * 0.56, 640), 820)
-    readonly property real expandedWidth: Math.min(root.availableWidth, 1180)
-    readonly property real panelWidth: root.open ? root.expandedWidth : root.compactWidth
+    readonly property real interactiveLeft: Theme.barW
+    readonly property real availableWidth: Math.max(720, root.screenWidth - root.interactiveLeft - 48)
+    readonly property real panelWidth: Math.min(root.availableWidth, 1180)
     readonly property real panelHeight: Math.min(Math.max(root.screenHeight * 0.57, 480), 720)
-    readonly property real topOffset: 14
-    readonly property real bridgeHeight: root.open ? 24 : 0
+    readonly property real topOffset: 18
+    readonly property bool panelVisible: root.open || sheet.opacity > 0.01
     readonly property string pageGlyph: root.metaForPage(root.currentPage).glyph
     readonly property string pageTitle: root.metaForPage(root.currentPage).title
     readonly property string pageSubtitle: root.metaForPage(root.currentPage).subtitle
@@ -106,163 +104,38 @@ PanelWindow {
     }
 
     mask: Region {
-        x: Math.round((root.width - root.panelWidth) / 2)
-        y: root.topOffset
-        width: Math.ceil(root.panelWidth)
-        height: root.open
-            ? Math.ceil(root.panelHeight + bar.height + root.bridgeHeight)
-            : Math.ceil(bar.height)
+        x: root.panelVisible ? Math.round(root.interactiveLeft) : 0
+        y: 0
+        width: root.panelVisible ? Math.max(0, Math.ceil(root.width - root.interactiveLeft)) : 0
+        height: root.panelVisible ? root.height : 0
     }
 
-    Rectangle {
-        id: bar
-        x: (root.width - root.panelWidth) / 2
-        y: root.topOffset
-        width: root.panelWidth
-        height: 72
-        radius: Theme.radiusLg
-        antialiasing: true
-        color: Qt.rgba(Theme.surfaceStrong.r, Theme.surfaceStrong.g, Theme.surfaceStrong.b, root.open ? 0.995 : 0.96)
-        border.width: 1
-        border.color: Theme.strokeStrong
+    MouseArea {
+        anchors.fill: parent
+        enabled: root.panelVisible
+        onClicked: (mouse) => {
+            const insidePanel = mouse.x >= sheet.x
+                && mouse.x <= sheet.x + sheet.width
+                && mouse.y >= sheet.y
+                && mouse.y <= sheet.y + sheet.height;
 
-        Behavior on x { NumberAnimation { duration: Theme.tBase; easing.type: Easing.OutExpo } }
-        Behavior on width { NumberAnimation { duration: Theme.tBase; easing.type: Easing.OutExpo } }
-        Behavior on color { ColorAnimation { duration: Theme.tFast } }
-
-        Row {
-            anchors.fill: parent
-            anchors.leftMargin: Theme.pad
-            anchors.rightMargin: Theme.pad
-            spacing: Theme.pad
-
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: 44
-                height: 44
-                radius: 22
-                antialiasing: true
-                color: Theme.accentSoft
-
-                Text {
-                    anchors.centerIn: parent
-                    text: root.pageGlyph
-                    font.family: Theme.iconFont
-                    font.pixelSize: 18
-                    color: Theme.accentActive
-                }
-            }
-
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                width: parent.width - 246
-                spacing: 4
-
-                Text {
-                    text: root.pageTitle
-                    font.pixelSize: Theme.fsTitle
-                    font.bold: true
-                    color: Theme.text
-                }
-
-                MarqueeText {
-                    text: root.open ? root.pageSubtitle : Hyprland.activeWindowSummary
-                    maxWidth: parent.width
-                    pixelSize: Theme.fsBodyLg
-                    color: Theme.textDim
-                    pauseDuration: 1100
-                    endPauseDuration: 800
-                }
-            }
-
-            Rectangle {
-                anchors.verticalCenter: parent.verticalCenter
-                width: 1
-                height: 30
-                color: Theme.stroke
-            }
-
-            Column {
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 2
-
-                Text {
-                    text: Clock.timeText
-                    font.pixelSize: Theme.fsTitle
-                    font.bold: true
-                    color: Theme.text
-                }
-
-                Text {
-                    text: Clock.dateText
-                    font.pixelSize: Theme.fsBody
-                    color: Theme.textDim
-                }
-            }
-
-            Item {
-                anchors.verticalCenter: parent.verticalCenter
-                width: 32
-                height: 32
-
-                Rectangle {
-                    anchors.fill: parent
-                    radius: 16
-                    color: closeHover.hovered ? Theme.accentSoft : Theme.cardHover
-                    antialiasing: true
-                    opacity: root.open ? 1 : 0.8
-                }
-
-                Text {
-                    anchors.centerIn: parent
-                    text: root.open ? "" : ""
-                    font.family: Theme.iconFont
-                    font.pixelSize: 13
-                    color: Theme.textDim
-                }
-
-                HoverHandler {
-                    id: closeHover
-                    cursorShape: Qt.PointingHandCursor
-                }
-
-                TapHandler {
-                    acceptedButtons: Qt.LeftButton
-                    onTapped: root.requestClose()
-                }
-            }
+            if (!insidePanel)
+                root.requestClose();
         }
-    }
-
-    Rectangle {
-        x: bar.x
-        y: bar.y + bar.height - 10
-        width: bar.width
-        height: root.bridgeHeight
-        radius: 14
-        antialiasing: true
-        opacity: root.open ? 1 : 0
-        color: Qt.rgba(Theme.surfaceStrong.r, Theme.surfaceStrong.g, Theme.surfaceStrong.b, 0.99)
-        border.width: root.open ? 1 : 0
-        border.color: Theme.strokeStrong
-
-        Behavior on opacity { NumberAnimation { duration: Theme.tFast } }
-        Behavior on height { NumberAnimation { duration: Theme.tBase; easing.type: Easing.OutExpo } }
-        Behavior on width { NumberAnimation { duration: Theme.tBase; easing.type: Easing.OutExpo } }
     }
 
     Card {
         id: sheet
-        x: (root.width - root.expandedWidth) / 2
-        y: root.open ? bar.y + bar.height + 6 : bar.y - root.panelHeight - 28
-        width: root.expandedWidth
+        x: root.interactiveLeft + Math.max(24, (root.width - root.interactiveLeft - root.panelWidth) / 2)
+        y: root.open ? root.topOffset : -root.panelHeight - 40
+        width: root.panelWidth
         height: root.panelHeight
         radius: Theme.radiusLg
         color: Qt.rgba(Theme.surfaceStrong.r, Theme.surfaceStrong.g, Theme.surfaceStrong.b, 0.995)
         border.color: Theme.strokeStrong
         opacity: root.open ? 1 : 0
         clip: true
-        visible: opacity > 0
+        visible: root.panelVisible
 
         Behavior on x { NumberAnimation { duration: Theme.tBase; easing.type: Easing.OutExpo } }
         Behavior on y { NumberAnimation { duration: Theme.tBase; easing.type: Easing.OutExpo } }
