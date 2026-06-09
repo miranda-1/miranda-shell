@@ -21,7 +21,7 @@ PanelWindow {
     implicitHeight: root.screenHeight
     color: "transparent"
     WlrLayershell.layer: WlrLayer.Top
-    WlrLayershell.keyboardFocus: root.open && root.currentPage === "search"
+    WlrLayershell.keyboardFocus: root.open && root.displayedPage === "search"
         ? WlrKeyboardFocus.OnDemand
         : WlrKeyboardFocus.None
 
@@ -34,13 +34,47 @@ PanelWindow {
     readonly property real availableWidth: Math.max(720, root.screenWidth - root.interactiveLeft - 48)
     readonly property real panelWidth: Math.min(root.availableWidth, 1180)
     readonly property real panelHeight: Math.min(Math.max(root.screenHeight * 0.57, 480), 720)
-    readonly property bool searchDocked: root.currentPage === "search"
+    // página efetivamente renderizada. Na troca com o painel aberto, a aba
+    // atual recolhe para dentro da barra, o conteúdo troca escondido e a nova
+    // aba surge da esquerda na altura do seu botão.
+    property string displayedPage: "dashboard"
+    // false durante a troca: manda o painel de volta para dentro da barra
+    property bool pageSettled: true
+
+    readonly property bool searchDocked: root.displayedPage === "search"
     // painel mais estreito no modo busca: leitura de launcher, não de sheet
     readonly property real searchPanelWidth: Math.min(root.availableWidth, 760)
 
-    // Sistema e Perfil vivem na coluna de baixo da EdgeLeft: o painel ancora
-    // embaixo e a animação de abertura sobe de baixo para cima.
-    readonly property bool bottomAnchored: root.currentPage === "system" || root.currentPage === "profile"
+    // x do painel recolhido: inteiro atrás da EdgeLeft (a janela começa na
+    // borda da barra, então x negativo é clipado — some "para dentro" dela)
+    readonly property real hiddenX: -(sheet.width + 48)
+
+    Component.onCompleted: root.displayedPage = root.currentPage
+
+    onCurrentPageChanged: {
+        // fechado/invisível: troca direto, sem coreografia
+        if (!root.open || !root.panelVisible) {
+            root.displayedPage = root.currentPage;
+            return;
+        }
+
+        if (root.displayedPage === root.currentPage)
+            return;
+
+        // aberto: recolhe a aba atual; o timer troca o conteúdo quando ela
+        // já está guardada e libera a nova a deslizar de volta
+        root.pageSettled = false;
+        pageSwapTimer.restart();
+    }
+
+    Timer {
+        id: pageSwapTimer
+        interval: Theme.tBase + 30
+        onTriggered: {
+            root.displayedPage = root.currentPage;
+            root.pageSettled = true;
+        }
+    }
 
     // topo do i-ésimo botão da coluna superior da EdgeLeft: topMargin (gap)
     // + i × (botão 40 + spacing 2). Workspaces fica após o divisor (10 + 2×2).
@@ -52,7 +86,7 @@ PanelWindow {
     function pageAnchorY() {
         const maxTop = Math.max(12, root.height - root.panelHeight - 12);
 
-        switch (root.currentPage) {
+        switch (root.displayedPage) {
         case "search":     return Math.min(root.topButtonY(1), maxTop);
         case "calendar":   return Math.min(root.topButtonY(2), maxTop);
         case "controls":   return Math.min(root.topButtonY(3), maxTop);
@@ -66,11 +100,11 @@ PanelWindow {
         default:           return Math.min(root.topButtonY(0), maxTop);
         }
     }
-    readonly property bool panelVisible: root.open || sheet.opacity > 0.01
-    readonly property string pageGlyph: root.metaForPage(root.currentPage).glyph
-    readonly property string pageTitle: root.metaForPage(root.currentPage).title
-    readonly property string pageSubtitle: root.metaForPage(root.currentPage).subtitle
-    readonly property var headerPills: root.pillsForPage(root.currentPage)
+    readonly property bool panelVisible: root.open || sheet.x > root.hiddenX + 0.5
+    readonly property string pageGlyph: root.metaForPage(root.displayedPage).glyph
+    readonly property string pageTitle: root.metaForPage(root.displayedPage).title
+    readonly property string pageSubtitle: root.metaForPage(root.displayedPage).subtitle
+    readonly property var headerPills: root.pillsForPage(root.displayedPage)
 
     function metaForPage(pageId) {
         switch (pageId) {
@@ -160,11 +194,12 @@ PanelWindow {
 
     Card {
         id: sheet
-        // todas as páginas nascem coladas na EdgeLeft (x=0 = borda da barra)
-        x: root.interactiveLeft
-        y: root.open
-            ? root.pageAnchorY()
-            : (root.bottomAnchored ? root.height + 40 : -root.panelHeight - 40)
+        // a aba desliza na horizontal: guardada atrás da barra (hiddenX) ou
+        // encaixada nela (0). Abrir, fechar e trocar de página são sempre o
+        // mesmo movimento de entrar/sair da EdgeLeft.
+        x: root.open && root.pageSettled ? root.interactiveLeft : root.hiddenX
+        // y e width não animam: só mudam com a aba escondida atrás da barra
+        y: root.pageAnchorY()
         width: root.searchDocked ? root.searchPanelWidth : root.panelWidth
         height: root.panelHeight
         radius: Theme.radiusLg
@@ -172,19 +207,10 @@ PanelWindow {
         // vira fantasma — o encaixe na barra fica por conta do x=0
         color: Qt.rgba(Theme.surfaceStrong.r, Theme.surfaceStrong.g, Theme.surfaceStrong.b, 0.995)
         border.color: Theme.strokeStrong
-        opacity: root.open ? 1 : 0
         clip: true
         visible: root.panelVisible
 
         Behavior on x { NumberAnimation { duration: Theme.tBase; easing.type: Easing.OutExpo } }
-        // o y só anima com o painel visível: trocar de página fechado salta
-        // direto para o lado certo, e a abertura desliza do lado do botão
-        Behavior on y {
-            enabled: root.open || sheet.opacity > 0.01
-            NumberAnimation { duration: Theme.tBase; easing.type: Easing.OutExpo }
-        }
-        Behavior on width { NumberAnimation { duration: Theme.tBase; easing.type: Easing.OutExpo } }
-        Behavior on opacity { NumberAnimation { duration: Theme.tFast } }
 
         Column {
             anchors.fill: parent
@@ -223,13 +249,13 @@ PanelWindow {
                 Loader {
                     id: pageLoader
                     width: scroll.width
-                    sourceComponent: root.currentPage === "search" ? searchPage
-                        : root.currentPage === "calendar" ? calendarPage
-                        : root.currentPage === "controls" ? controlsPage
-                        : root.currentPage === "media" ? mediaPage
-                        : root.currentPage === "workspaces" ? workspacesPage
-                        : root.currentPage === "system" ? systemPage
-                        : root.currentPage === "profile" ? profilePage
+                    sourceComponent: root.displayedPage === "search" ? searchPage
+                        : root.displayedPage === "calendar" ? calendarPage
+                        : root.displayedPage === "controls" ? controlsPage
+                        : root.displayedPage === "media" ? mediaPage
+                        : root.displayedPage === "workspaces" ? workspacesPage
+                        : root.displayedPage === "system" ? systemPage
+                        : root.displayedPage === "profile" ? profilePage
                         : dashboardPage
                 }
             }
