@@ -5,6 +5,7 @@ import "pages"
 import Quickshell
 import Quickshell.Wayland
 import QtQuick
+import QtQuick.Controls
 
 PanelWindow {
     id: root
@@ -34,6 +35,20 @@ PanelWindow {
     readonly property real availableWidth: Math.max(720, root.screenWidth - root.interactiveLeft - 48)
     readonly property real panelWidth: Math.min(root.availableWidth, 1180)
     readonly property real panelHeight: Math.min(Math.max(root.screenHeight * 0.57, 480), 720)
+
+    // largura por página: painéis bem mais estreitos (≈ -1/3 do antigo 1180,
+    // e ainda menos nas páginas de pouco conteúdo)
+    function pageWidthFor(pageId) {
+        switch (pageId) {
+        case "search":     return Math.min(root.availableWidth, 560);
+        case "stats":
+        case "power":      return Math.min(root.availableWidth, 460);
+        case "keybinds":
+        case "appearance":
+        case "calendar":   return Math.min(root.availableWidth, 640);
+        default:           return Math.min(root.availableWidth, 800);
+        }
+    }
     // página efetivamente renderizada. Na troca com o painel aberto, a aba
     // atual recolhe para dentro da barra, o conteúdo troca escondido e a nova
     // aba surge da esquerda na altura do seu botão.
@@ -225,7 +240,7 @@ PanelWindow {
         x: root.open && root.pageSettled ? root.interactiveLeft : root.hiddenX
         // y e width não animam: só mudam com a aba escondida atrás da barra
         y: root.pageAnchorY()
-        width: root.searchDocked ? root.searchPanelWidth : root.panelWidth
+        width: root.pageWidthFor(root.displayedPage)
         height: root.sheetHeight
         radius: Theme.radiusLg
         // quase opaco: sobre janelas (terminal/browser), translucidez alta
@@ -272,6 +287,21 @@ PanelWindow {
                 contentWidth: width
                 contentHeight: (pageLoader.item ? pageLoader.item.implicitHeight : 0) + root.bottomInset
                 boundsBehavior: Flickable.StopAtBounds
+
+                // barra de rolagem arrastável (aparece quando há overflow)
+                ScrollBar.vertical: ScrollBar {
+                    id: vbar
+                    policy: scroll.contentHeight > scroll.height ? ScrollBar.AlwaysOn : ScrollBar.AsNeeded
+                    width: 10
+                    contentItem: Rectangle {
+                        implicitWidth: 6
+                        radius: 3
+                        color: vbar.pressed ? Theme.accentActive : Theme.textFaint
+                        opacity: vbar.pressed || vbar.hovered ? 0.95 : 0.55
+
+                        Behavior on color { ColorAnimation { duration: Theme.tFast } }
+                    }
+                }
 
                 Loader {
                     id: pageLoader
