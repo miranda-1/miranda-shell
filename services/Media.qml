@@ -144,9 +144,13 @@ Singleton {
 
         const total = Math.floor(sec);
         const s = total % 60;
-        const m = Math.floor(total / 60);
+        const m = Math.floor(total / 60) % 60;
+        const h = Math.floor(total / 3600);
+        const pad = (n) => (n < 10 ? "0" : "") + n;
 
-        return m + ":" + (s < 10 ? "0" : "") + s;
+        if (h > 0)
+            return h + ":" + pad(m) + ":" + pad(s);
+        return m + ":" + pad(s);
     }
 
     readonly property string positionText: root._fmt(root.position)
