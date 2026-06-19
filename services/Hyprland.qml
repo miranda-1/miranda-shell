@@ -186,6 +186,55 @@ Singleton {
         return true;
     }
 
+    // ---- visão por workspace (alt-tab agrupado) ----
+    // Lista de toplevels (HyprlandToplevel) de um workspace. Cada item tem
+    // `.wayland` (capturável pelo ScreencopyView), `.address`, `.title`, `.activated`.
+    function workspaceToplevels(workspace) {
+        return root._modelValues(workspace ? workspace.toplevels : null);
+    }
+
+    // Rótulo de app de um toplevel do Hyprland (class > initialClass > title).
+    function toplevelLabel(toplevel) {
+        return root._toplevelAppLabel(toplevel);
+    }
+
+    // Foca uma janela específica pelo address — IPC typed (dispatch), não Process.
+    // Troca de workspace se preciso. Mais robusto que activate() do Wayland.
+    function focusToplevel(toplevel) {
+        if (!toplevel || !toplevel.address)
+            return false;
+
+        root._hypr.dispatch("focuswindow address:" + toplevel.address);
+        return true;
+    }
+
+    // Fecha graciosamente uma janela: prefere close() typed do Wayland (o app
+    // pode pedir para salvar); cai no dispatch closewindow se não houver handle.
+    function closeToplevel(toplevel) {
+        if (!toplevel)
+            return false;
+
+        if (toplevel.wayland) {
+            toplevel.wayland.close();
+            return true;
+        }
+
+        if (toplevel.address) {
+            root._hypr.dispatch("closewindow address:" + toplevel.address);
+            return true;
+        }
+
+        return false;
+    }
+
+    // Fecha todas as janelas de um workspace (ação destrutiva — a UI confirma).
+    function closeWorkspace(workspace) {
+        const tops = root.workspaceToplevels(workspace);
+        for (let i = 0; i < tops.length; i++)
+            root.closeToplevel(tops[i]);
+        return tops.length > 0;
+    }
+
     function _toplevelClassText(toplevel) {
         if (!toplevel)
             return "";

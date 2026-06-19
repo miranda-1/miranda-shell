@@ -36,6 +36,12 @@ PanelWindow {
     readonly property real panelWidth: Math.min(root.availableWidth, 1180)
     readonly property real panelHeight: Math.min(Math.max(root.screenHeight * 0.57, 480), 720)
 
+    // nº de workspaces da tela — dimensiona o overview alt-tab.
+    readonly property int workspaceCount: {
+        const list = Hyprland.workspacesForScreen(root.screen);
+        return (list && list.length > 0) ? list.length : Hyprland.workspaceList.length;
+    }
+
     // largura por página: painéis bem mais estreitos (≈ -1/3 do antigo 1180,
     // e ainda menos nas páginas de pouco conteúdo)
     function pageWidthFor(pageId) {
@@ -46,8 +52,23 @@ PanelWindow {
         case "keybinds":
         case "appearance":
         case "calendar":   return Math.min(root.availableWidth, 640);
+        // workspaces = overview tipo alt-tab compacto e centralizado: a largura
+        // acompanha o nº de colunas (cards ~320) em vez de esticar a tela toda.
+        case "workspaces": {
+            const cols = Math.max(1, Math.min(root.workspaceCount, 3));
+            const card = 320;
+            return Math.min(root.availableWidth, cols * card + (cols - 1) * Theme.gap + (Theme.pad + 2) * 2);
+        }
         default:           return Math.min(root.availableWidth, 800);
         }
+    }
+
+    // x do painel aberto. Quase todas as páginas encaixam na EdgeLeft
+    // (interactiveLeft = 0); workspaces abre centralizado na tela.
+    function openXFor(pageId) {
+        if (pageId === "workspaces")
+            return Math.max(root.interactiveLeft, Math.round((root.width - root.pageWidthFor(pageId)) / 2));
+        return root.interactiveLeft;
     }
     // página efetivamente renderizada. Na troca com o painel aberto, a aba
     // atual recolhe para dentro da barra, o conteúdo troca escondido e a nova
@@ -103,7 +124,12 @@ PanelWindow {
     readonly property real bottomInset: Theme.pad + 8
     readonly property real sheetNeededHeight: (pageLoader.item ? pageLoader.item.implicitHeight : 0)
         + (root.searchDocked ? 0 : 105) + (Theme.pad + 2) * 2 + root.bottomInset
-    readonly property real sheetHeight: Math.max(240, Math.min(root.panelHeight, root.sheetNeededHeight))
+    // teto de altura: workspaces (overview alt-tab) usa quase a tela toda para
+    // caber todos os cards sem rolar; as demais páginas ficam no panelHeight.
+    readonly property real maxSheetHeight: root.displayedPage === "workspaces"
+        ? Math.min(root.screenHeight * 0.86, root.screenHeight - 72)
+        : root.panelHeight
+    readonly property real sheetHeight: Math.max(240, Math.min(root.maxSheetHeight, root.sheetNeededHeight))
 
     // y do painel aberto: cada página nasce na linha do botão que a abriu
     function pageAnchorY() {
@@ -116,7 +142,7 @@ PanelWindow {
         case "media":      return Math.min(root.topButtonY(4), maxTop);
         case "keybinds":   return Math.min(root.topButtonY(5), maxTop);
         case "appearance": return Math.min(root.topButtonY(6), maxTop);
-        case "workspaces": return Math.min(root.topButtonY(7) + 12, maxTop);
+        case "workspaces": return Math.max(36, Math.round((root.height - root.sheetHeight) / 2));
         // base alinhada à base do respectivo botão da coluna inferior:
         // perfil termina em H-10; sistema logo acima, em H-52
         case "system":     return Math.max(12, root.height - 52 - root.sheetHeight);
@@ -144,7 +170,7 @@ PanelWindow {
         case "media":
             return { glyph: "", title: "Mídia", subtitle: "Estado MPRIS real, progresso e controles já aprovados centralizados aqui." };
         case "workspaces":
-            return { glyph: "", title: "Janelas", subtitle: "Pré-visualização ao vivo das janelas abertas — clique para focar." };
+            return { glyph: "", title: "Workspaces", subtitle: "Workspaces da tela com pré-visualização das janelas — clique para focar." };
         case "system":
             return { glyph: "", title: "Sistema", subtitle: "Sessão, uptime, bateria e leituras do ambiente atual sem polling externo." };
         case "profile":
@@ -237,7 +263,7 @@ PanelWindow {
         // a aba desliza na horizontal: guardada atrás da barra (hiddenX) ou
         // encaixada nela (0). Abrir, fechar e trocar de página são sempre o
         // mesmo movimento de entrar/sair da EdgeLeft.
-        x: root.open && root.pageSettled ? root.interactiveLeft : root.hiddenX
+        x: root.open && root.pageSettled ? root.openXFor(root.displayedPage) : root.hiddenX
         // y e width não animam: só mudam com a aba escondida atrás da barra
         y: root.pageAnchorY()
         width: root.pageWidthFor(root.displayedPage)

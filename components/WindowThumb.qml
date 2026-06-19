@@ -9,8 +9,16 @@ import QtQuick
 Rectangle {
     id: root
 
+    // toplevel Wayland (captureSource do ScreencopyView). Pode ser null se a
+    // janela não expõe handle Wayland — aí mostra só o fallback.
     required property var toplevel
-    readonly property bool active: Windows.isActive(root.toplevel)
+    // rótulo explícito (ex.: class do Hyprland). Vazio → deriva do toplevel.
+    property string labelText: ""
+    // estado ativo — sobrescrevível por quem conhece melhor (Hyprland).
+    property bool active: Windows.isActive(root.toplevel)
+
+    readonly property string label: root.labelText !== ""
+                                     ? root.labelText : Windows.appLabel(root.toplevel)
 
     signal activated()
 
@@ -59,7 +67,7 @@ Rectangle {
             color: Theme.accentTrack
             Text {
                 anchors.centerIn: parent
-                text: Windows.appLabel(root.toplevel).charAt(0).toUpperCase()
+                text: root.label.charAt(0).toUpperCase()
                 font.pixelSize: Theme.fsDisplay
                 font.bold: true
                 color: Theme.textDim
@@ -94,7 +102,7 @@ Rectangle {
             anchors.verticalCenter: parent.verticalCenter
             width: labelRow.width - labelRow.leftPadding - labelRow.rightPadding
                    - (root.active ? 16 : 0)
-            text: Windows.appLabel(root.toplevel)
+            text: root.label
             elide: Text.ElideRight
             font.pixelSize: Theme.fsLabel
             font.bold: root.active
