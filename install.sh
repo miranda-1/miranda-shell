@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Instalador do ui-shell-prototype — uma shell Quickshell para Hyprland.
+# Instalador do miranda-shell — uma shell Quickshell para Hyprland.
 #
 # O que ele faz (e o que NÃO faz):
 #   - confere as dependências e mostra o que falta (no Arch, oferece instalar);
@@ -20,7 +20,7 @@ err()   { printf '%s  ✗%s %s\n' "$red" "$rst" "$*" >&2; }
 
 # Diretório do próprio repositório (funciona de onde você tiver clonado).
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NAME="ui-shell"
+NAME="miranda-shell"
 CFG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/quickshell"
 LINK="$CFG_DIR/$NAME"
 
@@ -124,7 +124,7 @@ if [[ -f "$HYPR_CONF" ]]; then
   else
     read -rp "  Adicionar autostart (${bold}$AUTOSTART_LINE${rst}) no hyprland.conf? [s/N] " a2
     if [[ "${a2,,}" == s* ]]; then
-      printf '\n# ui-shell-prototype\n%s\n' "$AUTOSTART_LINE" >> "$HYPR_CONF"
+      printf '\n# miranda-shell\n%s\n' "$AUTOSTART_LINE" >> "$HYPR_CONF"
       ok "Linha adicionada. (Comente a da Waybar quando quiser trocar de vez.)"
     else
       warn "Sem autostart. Rode manualmente: ${bold}qs -c $NAME${rst}"

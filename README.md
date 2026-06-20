@@ -1,4 +1,4 @@
-# ui-shell
+# miranda-shell
 
 Uma **shell de borda reativa** para **Hyprland**, escrita em **[Quickshell](https://quickshell.outfoxxed.me/) (QML)**.
 Inspirada no [Caelestia](https://github.com/caelestia-dots/shell): uma barra lateral
@@ -42,25 +42,25 @@ quando você troca o wallpaper/tema).
 ## 🚀 Instalação rápida
 
 ```sh
-git clone https://github.com/miranda-1/Shell-Arch.git
-cd Shell-Arch
+git clone https://github.com/miranda-1/miranda-shell.git
+cd miranda-shell
 ./install.sh
 ```
 
 O `install.sh`:
 
 1. confere as dependências e, **no Arch**, oferece instalar o que faltar;
-2. liga o repositório em `~/.config/quickshell/ui-shell` (symlink — atualiza junto
+2. liga o repositório em `~/.config/quickshell/miranda-shell` (symlink — atualiza junto
    com `git pull`);
 3. opcionalmente adiciona o autostart no seu `hyprland.conf`.
 
 Depois é só rodar (sem reiniciar):
 
 ```sh
-qs -c ui-shell
+qs -c miranda-shell
 ```
 
-Pra fechar: `qs kill`. Pra ver logs: `qs -c ui-shell --log`.
+Pra fechar: `qs kill`. Pra ver logs: `qs -c miranda-shell --log`.
 
 ---
 
@@ -98,16 +98,16 @@ Pra fechar: `qs kill`. Pra ver logs: `qs -c ui-shell --log`.
 paru -S quickshell-git hyprland ttf-jetbrains-mono-nerd brightnessctl
 
 # 2. ligar a config
-ln -s "$PWD" ~/.config/quickshell/ui-shell
+ln -s "$PWD" ~/.config/quickshell/miranda-shell
 
 # 3. rodar
-qs -c ui-shell
+qs -c miranda-shell
 ```
 
 Pra iniciar junto do Hyprland, adicione ao `~/.config/hypr/hyprland.conf`:
 
 ```conf
-exec-once = qs -c ui-shell
+exec-once = qs -c miranda-shell
 ```
 
 ---
@@ -115,9 +115,9 @@ exec-once = qs -c ui-shell
 ## 🗑️ Desinstalar
 
 ```sh
-rm ~/.config/quickshell/ui-shell           # remove o symlink
+rm ~/.config/quickshell/miranda-shell           # remove o symlink
 qs kill                                     # fecha a shell
-# e tire a linha `exec-once = qs -c ui-shell` do hyprland.conf, se adicionou
+# e tire a linha `exec-once = qs -c miranda-shell` do hyprland.conf, se adicionou
 ```
 
 Nada além disso é tocado no sistema.
@@ -134,7 +134,7 @@ modules/
   EdgeLeft/            # a barra lateral / seletor
   TopSheet/            # o painel do topo + as páginas (pages/*.qml)
 components/            # widgets reutilizáveis (cards, sliders, tray, menus…)
-docs/                  # plano técnico e notas
+deploy/                # rollback.sh — reverte o deploy (religa a Waybar)
 ```
 
 ## 🔒 Segurança
