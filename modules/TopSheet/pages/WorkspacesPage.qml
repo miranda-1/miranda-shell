@@ -14,10 +14,8 @@ Item {
 
     signal requestClose()
 
-    readonly property var workspaceList: {
-        const list = Hyprland.workspacesForScreen(root.screenRef);
-        return list.length > 0 ? list : Hyprland.workspaceList;
-    }
+    // todos os workspaces de todas as telas (não só os do monitor do shell)
+    readonly property var workspaceList: Hyprland.workspaceList
 
     implicitHeight: content.implicitHeight
 
