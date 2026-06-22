@@ -16,9 +16,15 @@ Rectangle {
     // ex.: escolher a saída de áudio) e emite detailClicked()
     property bool expandable: false
 
+    // quando true, o ícone vira botão de mudo (emite muteToggled); `muted`
+    // controla o visual de mudo (ícone esmaecido + badge "Mudo")
+    property bool muteEnabled: false
+    property bool muted: false
+
     signal moved(real newValue)
     signal badgeClicked()
     signal detailClicked()
+    signal muteToggled()
 
     radius: Theme.radius
     color: Theme.card
@@ -36,11 +42,29 @@ Rectangle {
             width: parent.width
             spacing: Theme.gap
 
-            Text {
-                text: root.glyph
-                font.family: Theme.iconFont
-                font.pixelSize: 16
-                color: root.live ? Theme.accent : Theme.textDim
+            Item {
+                width: glyphText.implicitWidth
+                height: glyphText.implicitHeight
+                anchors.verticalCenter: undefined
+
+                Text {
+                    id: glyphText
+                    text: root.glyph
+                    font.family: Theme.iconFont
+                    font.pixelSize: 16
+                    color: root.muteEnabled && root.muted ? Theme.textFaint
+                         : root.live ? Theme.accent : Theme.textDim
+
+                    Behavior on color { ColorAnimation { duration: Theme.tFast } }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.margins: -6
+                    enabled: root.muteEnabled
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.muteToggled()
+                }
             }
 
             Text {
@@ -61,7 +85,9 @@ Rectangle {
                 Text {
                     id: percentText
                     anchors.centerIn: parent
-                    text: Math.round(Math.max(0, Math.min(1, root.value)) * 100) + "%"
+                    text: root.muteEnabled && root.muted
+                        ? "Mudo"
+                        : Math.round(Math.max(0, Math.min(1, root.value)) * 100) + "%"
                     font.pixelSize: 11
                     color: root.live ? Theme.accentActive : Theme.textDim
                 }

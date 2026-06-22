@@ -11,6 +11,7 @@ Item {
     // seções expansíveis (uma por vez)
     property bool wifiExpanded: false
     property bool btExpanded: false
+    property bool audioExpanded: false
 
     // rede protegida aguardando senha (identificada pelo nome) + senha digitada
     property string pwTargetName: ""
@@ -26,6 +27,7 @@ Item {
     readonly property string glyphSun: ""
     readonly property string glyphLock: ""
     readonly property string glyphCheck: ""
+    readonly property string glyphEthernet: "󰨾"
 
     // escaneia redes só enquanto esta página existe
     Component.onCompleted: Network.setScanning(true)
@@ -63,8 +65,10 @@ Item {
                 onToggled: Network.setWifiEnabled(!Network.wifiEnabled)
                 onActivated: {
                     root.wifiExpanded = !root.wifiExpanded;
-                    if (root.wifiExpanded)
+                    if (root.wifiExpanded) {
                         root.btExpanded = false;
+                        root.audioExpanded = false;
+                    }
                 }
             }
 
@@ -79,8 +83,10 @@ Item {
                 onToggled: Bluez.setEnabled(!Bluez.enabled)
                 onActivated: {
                     root.btExpanded = !root.btExpanded;
-                    if (root.btExpanded)
+                    if (root.btExpanded) {
                         root.wifiExpanded = false;
+                        root.audioExpanded = false;
+                    }
                 }
             }
 
@@ -247,6 +253,67 @@ Item {
                 anchors.top: parent.top
                 anchors.margins: Theme.pad
                 spacing: Theme.gap
+
+                // ---- status do cabo de rede (Ethernet) ----
+                Rectangle {
+                    visible: Network.hasWiredDevice
+                    width: parent.width
+                    height: 52
+                    radius: Theme.radiusSm
+                    antialiasing: true
+                    color: Network.wiredConnected ? Theme.accentSoft : Theme.accentTrack
+                    border.width: 1
+                    border.color: Network.wiredConnected ? Theme.strokeStrong : Theme.stroke
+
+                    Text {
+                        id: ethGlyph
+                        anchors.left: parent.left
+                        anchors.leftMargin: Theme.pad
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.glyphEthernet
+                        font.family: Theme.iconFont
+                        font.pixelSize: 16
+                        color: Network.wiredConnected ? Theme.accentActive : Theme.textDim
+                    }
+
+                    Text {
+                        id: ethBadge
+                        anchors.right: parent.right
+                        anchors.rightMargin: Theme.pad
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: Network.wiredConnected ? root.glyphCheck + "  conectado" : "sem cabo"
+                        font.family: Theme.iconFont
+                        font.pixelSize: Theme.fsCaption
+                        color: Network.wiredConnected ? Theme.accentActive : Theme.textDim
+                    }
+
+                    Column {
+                        anchors.left: ethGlyph.right
+                        anchors.leftMargin: Theme.pad
+                        anchors.right: ethBadge.left
+                        anchors.rightMargin: Theme.pad
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 2
+
+                        Text {
+                            width: parent.width
+                            text: "Cabo de rede"
+                            font.pixelSize: Theme.fsBodyLg
+                            color: Theme.text
+                            elide: Text.ElideRight
+                        }
+
+                        Text {
+                            width: parent.width
+                            text: Network.wiredConnected
+                                ? "Conectado" + (Network.wiredName.length > 0 ? " • " + Network.wiredName : "")
+                                : "Desconectado — conecte o cabo"
+                            font.pixelSize: Theme.fsCaption
+                            color: Theme.textDim
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
 
                 Item {
                     width: parent.width
@@ -736,11 +803,23 @@ Item {
                 value: Math.min(1, Audio.volume)
                 live: Audio.available && !Audio.muted
                 interactive: Audio.available
-                detail: Audio.available
-                    ? (Audio.muted ? "Mudo — clique no % para reativar." : Audio.deviceName)
-                    : "Pipewire indisponível nesta sessão."
+                detail: !Audio.available ? "Pipewire indisponível nesta sessão."
+                    : Audio.muted ? "Mudo — toque no ícone do som para reativar."
+                    : Audio.hasMultipleSinks ? "Saindo por: " + Audio.deviceName
+                    : Audio.deviceName
+                expandable: Audio.available && Audio.hasMultipleSinks && !Audio.muted
+                muteEnabled: Audio.available
+                muted: Audio.muted
                 onMoved: (newValue) => Audio.setVolume(newValue)
                 onBadgeClicked: Audio.toggleMute()
+                onMuteToggled: Audio.toggleMute()
+                onDetailClicked: {
+                    root.audioExpanded = !root.audioExpanded;
+                    if (root.audioExpanded) {
+                        root.wifiExpanded = false;
+                        root.btExpanded = false;
+                    }
+                }
             }
 
             ControlSlider {
@@ -754,6 +833,126 @@ Item {
                     ? "Tela interna do notebook."
                     : "Sem backlight interno detectado nesta sessão."
                 onMoved: (newValue) => Brightness.setPercent(newValue)
+            }
+        }
+
+        // ---- saídas de áudio (para onde o som sai) ----
+        Rectangle {
+            visible: root.audioExpanded
+            width: parent.width
+            implicitHeight: audioList.implicitHeight + Theme.pad * 2
+            radius: Theme.radius
+            color: Theme.card
+            border.width: 1
+            border.color: Theme.stroke
+            antialiasing: true
+            clip: true
+
+            Column {
+                id: audioList
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.margins: Theme.pad
+                spacing: Theme.gap
+
+                Item {
+                    width: parent.width
+                    height: audioTitle.implicitHeight
+
+                    Text {
+                        id: audioTitle
+                        anchors.left: parent.left
+                        text: "Saída de som"
+                        font.pixelSize: Theme.fsLabel
+                        color: Theme.textDim
+                    }
+
+                    Text {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "toque para mudar"
+                        font.pixelSize: Theme.fsCaption
+                        color: Theme.textFaint
+                    }
+                }
+
+                Repeater {
+                    model: Audio.sinks
+
+                    delegate: Rectangle {
+                        id: sinkRow
+
+                        required property var modelData
+
+                        readonly property bool isCurrent: Audio.isDefaultSink(sinkRow.modelData)
+
+                        width: parent.width
+                        height: 52
+                        radius: Theme.radiusSm
+                        antialiasing: true
+                        color: sinkRow.isCurrent ? Theme.accentSoft
+                             : sinkHover.hovered ? Theme.accentSoft
+                             : Theme.accentTrack
+                        border.width: 1
+                        border.color: sinkRow.isCurrent ? Theme.strokeStrong : Theme.stroke
+
+                        Behavior on color { ColorAnimation { duration: Theme.tFast } }
+
+                        HoverHandler {
+                            id: sinkHover
+                            cursorShape: Qt.PointingHandCursor
+                        }
+
+                        TapHandler {
+                            acceptedButtons: Qt.LeftButton
+                            onTapped: Audio.setDefaultSink(sinkRow.modelData)
+                        }
+
+                        Text {
+                            id: sinkGlyph
+                            anchors.left: parent.left
+                            anchors.leftMargin: Theme.pad
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: root.glyphVolume
+                            font.family: Theme.iconFont
+                            font.pixelSize: 15
+                            color: sinkRow.isCurrent ? Theme.accentActive : Theme.textDim
+                        }
+
+                        Text {
+                            id: sinkBadge
+                            anchors.right: parent.right
+                            anchors.rightMargin: Theme.pad
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: sinkRow.isCurrent ? root.glyphCheck + "  atual" : "usar"
+                            font.family: Theme.iconFont
+                            font.pixelSize: Theme.fsCaption
+                            color: sinkRow.isCurrent ? Theme.accentActive : Theme.textDim
+                        }
+
+                        Text {
+                            anchors.left: sinkGlyph.right
+                            anchors.leftMargin: Theme.pad
+                            anchors.right: sinkBadge.left
+                            anchors.rightMargin: Theme.pad
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: Audio.sinkLabel(sinkRow.modelData)
+                            font.pixelSize: Theme.fsBodyLg
+                            color: Theme.text
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+
+                Text {
+                    visible: Audio.sinks.length === 0
+                    width: parent.width
+                    text: "Nenhuma saída de áudio detectada."
+                    font.pixelSize: Theme.fsBodyLg
+                    color: Theme.textDim
+                    wrapMode: Text.Wrap
+                }
             }
         }
     }
